@@ -70,8 +70,8 @@ jobs:
           platforms: linux/${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ matrix.registry }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=build-${{ matrix.platform }}-${{ matrix.edition }}
+          cache-to: type=gha,scope=build-${{ matrix.platform }}-${{ matrix.edition }}
           outputs: type=image,name-canonical=true
           build-args: |
             COMMIT_SHA=${{ github.sha }}
