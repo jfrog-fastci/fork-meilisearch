@@ -702,7 +702,7 @@ fn hair_dryer(
                 }
             }
         } else {
-            eprintln!("Found index {uid} but it's not the right index...");
+            eprintln!("Found index {uid} but it's not the right indexes...");
         }
     }
 
