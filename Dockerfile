@@ -1,5 +1,5 @@
 # Chef base with cargo-chef pre-installed (Debian-based for better build performance vs Alpine/musl)
-FROM    lukemathwalker/cargo-chef:latest-rust-1.89 AS chef
+FROM    lukemathwalker/cargo-chef:latest-rust-1-slim-bookworm AS chef
 WORKDIR /app
 RUN     apt-get update && apt-get install -y --no-install-recommends libssl-dev pkg-config && \
         rm -rf /var/lib/apt/lists/*
