@@ -76,6 +76,8 @@ jobs:
           platforms: linux/${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ matrix.registry }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true
           build-args: |
             COMMIT_SHA=${{ github.sha }}
