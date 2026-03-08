@@ -71,7 +71,9 @@ jobs:
           platforms: linux/${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ matrix.registry }}
-          outputs: type=image,name-canonical=true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          outputs: type=registry
           build-args: |
             COMMIT_SHA=${{ github.sha }}
             COMMIT_DATE=${{ steps.build-metadata.outputs.date }}
