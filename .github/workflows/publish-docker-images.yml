@@ -73,7 +73,7 @@ jobs:
           tags: ${{ matrix.registry }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          outputs: type=image,name-canonical=true
+          outputs: type=registry
           build-args: |
             COMMIT_SHA=${{ github.sha }}
             COMMIT_DATE=${{ steps.build-metadata.outputs.date }}
