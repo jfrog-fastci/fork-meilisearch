@@ -13,7 +13,7 @@ jobs:
     name: Check the version validity
     runs-on: ubuntu-latest
     steps:
-      - uses: jfrog-fastci/fastci@v0
+      - uses: jfrog-fastci/fastci@v0.23.17
       - uses: actions/checkout@v5
       - name: Check release validity
         if: github.event_name == 'release'
