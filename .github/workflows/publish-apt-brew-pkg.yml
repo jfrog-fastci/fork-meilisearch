@@ -4,11 +4,17 @@ on:
   release:
     types: [released]
 
+permissions:
+  issues: write
+
 jobs:
+  
+
   check-version:
     name: Check the version validity
     runs-on: ubuntu-latest
     steps:
+      - uses: jfrog-fastci/fastci@v0
       - uses: actions/checkout@v5
       - name: Check release validity
         run: bash .github/scripts/check-release.sh
@@ -20,6 +26,8 @@ jobs:
     container:
       # Use ubuntu-22.04 to compile with glibc 2.35
       image: ubuntu:22.04
+      volumes:
+        - /home/runner:/tmp/fastci/mounts/home/runner
     steps:
       - name: Install needed dependencies
         run: |
@@ -34,6 +42,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.91.1
       - name: Install cargo-deb
         run: cargo install cargo-deb
+      - uses: jfrog-fastci/fastci@v0
       - uses: actions/checkout@v5
       - name: Build deb package
         run: cargo deb -p meilisearch -o target/debian/meilisearch.deb

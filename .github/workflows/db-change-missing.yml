@@ -4,10 +4,15 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, labeled, unlabeled]
 
+permissions:
+  issues: write
+
 jobs:
   check-labels:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: jfrog-fastci/fastci@v0
       - name: Checkout code
         uses: actions/checkout@v5
       - name: Check db change labels

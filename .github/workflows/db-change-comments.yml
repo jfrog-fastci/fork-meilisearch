@@ -38,11 +38,15 @@ env:
         - If the change happened in the index-scheduler, we've never done it yet, but the right place to do it should be [here](https://github.com/meilisearch/meilisearch/blob/3fd86e8d76d7d468b0095d679adb09211ca3b6c0/crates/index-scheduler/src/scheduler/process_upgrade/mod.rs#L13)
       - [ ] Declarative test: add a [declarative test containing a dumpless upgrade](https://github.com/meilisearch/meilisearch/blob/main/TESTING.md#typical-usage)
 
+permissions:
+  issues: write
+
 jobs:
   add-comment:
     runs-on: ubuntu-latest
     if: github.event.label.name == 'db change'
     steps:
+      - uses: jfrog-fastci/fastci@v0
       - name: Add comment
         uses: actions/github-script@v7
         with:

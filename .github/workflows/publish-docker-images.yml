@@ -33,8 +33,10 @@ jobs:
             registry: getmeili/meilisearch-enterprise
             feature-flag: "--features enterprise"
 
-    permissions: {}
+    permissions:
+      issues: write
     steps:
+      - uses: jfrog-fastci/fastci@v0
       - uses: actions/checkout@v5
 
       - name: Prepare

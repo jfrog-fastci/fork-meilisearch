@@ -13,6 +13,9 @@ env:
   RUST_BACKTRACE: 1
   RUSTFLAGS: "-D warnings"
 
+permissions:
+  issues: write
+
 jobs:
   test-linux:
     name: Tests on ${{ matrix.runner }} ${{ matrix.features }} 
@@ -22,6 +25,7 @@ jobs:
         runner: [ubuntu-22.04, ubuntu-22.04-arm]
         features: ["", "--features enterprise"]
     steps:
+      - uses: jfrog-fastci/fastci@v0
       - uses: actions/checkout@v5
       - name: check free space before
         run: df -h
@@ -60,6 +64,7 @@ jobs:
         features: ["", "--features enterprise"]
     if: github.event_name != 'merge_group'
     steps:
+      - uses: jfrog-fastci/fastci@v0
       - uses: actions/checkout@v5
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2.8.0
@@ -85,6 +90,7 @@ jobs:
         features: ["", "--features enterprise"]
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     steps:
+      - uses: jfrog-fastci/fastci@v0
       - uses: actions/checkout@v5
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2.8.0
@@ -105,6 +111,7 @@ jobs:
     runs-on: ubuntu-22.04
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     steps:
+      - uses: jfrog-fastci/fastci@v0
       - uses: actions/checkout@v5
       - name: Clean space as per https://github.com/actions/virtual-environments/issues/709
         run: |
@@ -126,6 +133,7 @@ jobs:
     env:
       MEILI_TEST_OLLAMA_SERVER: "http://localhost:11434"
     steps:
+      - uses: jfrog-fastci/fastci@v0
       - uses: actions/checkout@v5
       - name: Clean space as per https://github.com/actions/virtual-environments/issues/709
         run: |
@@ -163,6 +171,7 @@ jobs:
     runs-on: ubuntu-22.04
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     steps:
+      - uses: jfrog-fastci/fastci@v0
       - uses: actions/checkout@v5
       - name: Clean space as per https://github.com/actions/virtual-environments/issues/709
         run: |
@@ -185,6 +194,7 @@ jobs:
     name: Build in release
     runs-on: ubuntu-22.04
     steps:
+      - uses: jfrog-fastci/fastci@v0
       - uses: actions/checkout@v5
       - name: Clean space as per https://github.com/actions/virtual-environments/issues/709
         run: |
@@ -205,6 +215,7 @@ jobs:
       matrix:
         features: ["", "--features enterprise"]
     steps:
+      - uses: jfrog-fastci/fastci@v0
       - uses: actions/checkout@v5
       - name: Clean space as per https://github.com/actions/virtual-environments/issues/709
         run: |
@@ -227,6 +238,7 @@ jobs:
     name: Run Rustfmt
     runs-on: ubuntu-22.04
     steps:
+      - uses: jfrog-fastci/fastci@v0
       - uses: actions/checkout@v5
       - name: Clean space as per https://github.com/actions/virtual-environments/issues/709
         run: |

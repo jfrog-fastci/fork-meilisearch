@@ -12,6 +12,9 @@ env:
   NEW_BRANCH: update-version-${{ github.event.inputs.new_version }}
   GH_TOKEN: ${{ secrets.MEILI_BOT_GH_PAT }}
 
+permissions:
+  issues: write
+
 jobs:
   update-version-cargo-toml:
     name: Update version in Cargo.toml

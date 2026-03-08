@@ -16,12 +16,16 @@ env:
   MEILI_NO_ANALYTICS: "true"
   DISABLE_COVERAGE: "true"
 
+permissions:
+  issues: write
+
 jobs:
   define-docker-image:
     runs-on: ubuntu-latest
     outputs:
       docker-image: ${{ steps.define-image.outputs.docker-image }}
     steps:
+      - uses: jfrog-fastci/fastci@v0
       - uses: actions/checkout@v5
       - name: Define the Docker image we need to use
         id: define-image
@@ -50,6 +54,7 @@ jobs:
       MEILISEARCH_VERSION: ${{ needs.define-docker-image.outputs.docker-image }}
 
     steps:
+      - uses: jfrog-fastci/fastci@v0
       - uses: actions/checkout@v5
         with:
           repository: meilisearch/meilisearch-dotnet
@@ -105,6 +110,7 @@ jobs:
         ports:
           - "7700:7700"
     steps:
+      - uses: jfrog-fastci/fastci@v0
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
@@ -136,6 +142,7 @@ jobs:
         ports:
           - "7700:7700"
     steps:
+      - uses: jfrog-fastci/fastci@v0
       - uses: actions/checkout@v5
         with:
           repository: meilisearch/meilisearch-java
@@ -164,6 +171,7 @@ jobs:
         ports:
           - "7700:7700"
     steps:
+      - uses: jfrog-fastci/fastci@v0
       - uses: actions/checkout@v5
         with:
           repository: meilisearch/meilisearch-js
@@ -202,6 +210,7 @@ jobs:
         ports:
           - "7700:7700"
     steps:
+      - uses: jfrog-fastci/fastci@v0
       - uses: actions/checkout@v5
         with:
           repository: meilisearch/meilisearch-php
@@ -232,6 +241,7 @@ jobs:
         ports:
           - "7700:7700"
     steps:
+      - uses: jfrog-fastci/fastci@v0
       - uses: actions/checkout@v5
         with:
           repository: meilisearch/meilisearch-python
@@ -258,6 +268,7 @@ jobs:
         ports:
           - "7700:7700"
     steps:
+      - uses: jfrog-fastci/fastci@v0
       - uses: actions/checkout@v5
         with:
           repository: meilisearch/meilisearch-ruby
@@ -284,6 +295,7 @@ jobs:
         ports:
           - "7700:7700"
     steps:
+      - uses: jfrog-fastci/fastci@v0
       - uses: actions/checkout@v5
         with:
           repository: meilisearch/meilisearch-rust
@@ -306,6 +318,7 @@ jobs:
         ports:
           - "7700:7700"
     steps:
+      - uses: jfrog-fastci/fastci@v0
       - uses: actions/checkout@v5
         with:
           repository: meilisearch/meilisearch-swift
@@ -330,6 +343,7 @@ jobs:
         ports:
           - "7700:7700"
     steps:
+      - uses: jfrog-fastci/fastci@v0
       - uses: actions/checkout@v5
         with:
           repository: meilisearch/meilisearch-js-plugins
