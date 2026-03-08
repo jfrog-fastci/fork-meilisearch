@@ -222,7 +222,7 @@ fn clear_task_queue(db_path: PathBuf) -> anyhow::Result<()> {
         }
     }
 
-    eprintln!("Successfully deleted {count} content files from disk!");
+    eprintln!("Successfully deleted {count} content files from disk!!!");
 
     Ok(())
 }
@@ -702,7 +702,7 @@ fn hair_dryer(
                 }
             }
         } else {
-            eprintln!("Found index {uid} but it's not the right index...");
+            eprintln!("Found index {uid} but it's not the right index....");
         }
     }
 
