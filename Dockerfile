@@ -1,9 +1,16 @@
 # Compile
-FROM    rust:1.89-alpine3.22 AS compiler
+FROM    rust:1.89-alpine3.22 AS chef
+RUN     cargo install cargo-chef
+WORKDIR /app
 
+FROM    chef AS planner
+COPY    . .
+RUN     cargo chef prepare --recipe-path recipe.json
+
+FROM    chef AS compiler
 RUN     apk add -q --no-cache build-base openssl-dev
-
-WORKDIR /
+COPY    --from=planner /app/recipe.json recipe.json
+RUN     cargo chef cook --release --recipe-path recipe.json
 
 ARG     COMMIT_SHA
 ARG     COMMIT_DATE
@@ -28,8 +35,8 @@ RUN     apk add -q --no-cache libgcc tini curl
 
 # add meilisearch and meilitool to the `/bin` so you can run it from anywhere
 # and it's easy to find.
-COPY    --from=compiler /target/release/meilisearch /bin/meilisearch
-COPY    --from=compiler /target/release/meilitool /bin/meilitool
+COPY    --from=compiler /app/target/release/meilisearch /bin/meilisearch
+COPY    --from=compiler /app/target/release/meilitool /bin/meilitool
 # To stay compatible with the older version of the container (pre v0.27.0) we're
 # going to symlink the meilisearch binary in the path to `/meilisearch`
 RUN     ln -s /bin/meilisearch /meilisearch
