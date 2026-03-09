@@ -4,15 +4,6 @@ FROM    rust:1.89-alpine3.22 AS compiler
 RUN     apk add -q --no-cache build-base openssl-dev
 RUN     cargo install cargo-chef
 
-WORKDIR /
-
-ARG     COMMIT_SHA
-ARG     COMMIT_DATE
-ARG     GIT_TAG
-ARG     EXTRA_ARGS
-ENV     VERGEN_GIT_SHA=${COMMIT_SHA} VERGEN_GIT_COMMIT_TIMESTAMP=${COMMIT_DATE} VERGEN_GIT_DESCRIBE=${GIT_TAG}
-ENV     RUSTFLAGS="-C target-feature=-crt-static"
-
 FROM compiler AS planner
 WORKDIR /app
 COPY ./Cargo.toml ./Cargo.lock ./
@@ -23,6 +14,14 @@ WORKDIR /app
 COPY --from=planner /app/recipe.json recipe.json
 RUN cargo chef cook --release --recipe-path recipe.json
 COPY . .
+
+ARG     COMMIT_SHA
+ARG     COMMIT_DATE
+ARG     GIT_TAG
+ARG     EXTRA_ARGS
+ENV     VERGEN_GIT_SHA=${COMMIT_SHA} VERGEN_GIT_COMMIT_TIMESTAMP=${COMMIT_DATE} VERGEN_GIT_DESCRIBE=${GIT_TAG}
+ENV     RUSTFLAGS="-C target-feature=-crt-static"
+
 RUN     set -eux; \
         apkArch="$(apk --print-arch)"; \
         cargo build --release -p meilisearch -p meilitool ${EXTRA_ARGS}
