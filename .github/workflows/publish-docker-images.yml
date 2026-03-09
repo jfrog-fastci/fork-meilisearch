@@ -68,6 +68,8 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ matrix.registry }}
           outputs: type=image,name-canonical=true
+          cache-from: type=gha,scope=publish-${{ matrix.edition }}-${{ matrix.platform }}
+          cache-to: ${{ github.ref == 'refs/heads/main' && format('type=gha,mode=max,scope=publish-{0}-{1}', matrix.edition, matrix.platform) || '' }}
           build-args: |
             COMMIT_SHA=${{ github.sha }}
             COMMIT_DATE=${{ steps.build-metadata.outputs.date }}
