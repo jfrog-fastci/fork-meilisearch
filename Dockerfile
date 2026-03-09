@@ -1,9 +1,16 @@
 # Compile
-FROM    rust:1.89-alpine3.22 AS compiler
-
+FROM    rust:1.89-alpine3.22 AS chef
 RUN     apk add -q --no-cache build-base openssl-dev
+RUN     cargo install cargo-chef
+WORKDIR /app
 
-WORKDIR /
+FROM    chef AS planner
+COPY    ./Cargo.toml ./Cargo.lock ./
+RUN     cargo chef prepare --recipe-path recipe.json
+
+FROM    chef AS compiler
+COPY    --from=planner /app/recipe.json recipe.json
+RUN     cargo chef cook --release --recipe-path recipe.json
 
 ARG     COMMIT_SHA
 ARG     COMMIT_DATE
