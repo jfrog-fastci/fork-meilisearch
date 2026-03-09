@@ -100,17 +100,123 @@ Each insight lists what it detects and the safety rules for applying it.
 **Detects:** The build produces a local image that could be pushed directly using `--push` instead of a separate `docker push` step.
 
 **How to apply:**
-- Only apply when the workflow already authenticates to a registry or tags the image for a registry destination.
-- If there is no login step, registry hostname, or deployment flow, skip this insight.
+- Only apply when the workflow already authenticates to a registry or tags the image for a registry destination, AND there is no existing push mechanism.
+- **Skip** if the build already pushes via `outputs` (e.g., `type=image`, `type=registry`, `push-by-digest=true`) — the image is already being published and adding `push: true` is redundant or conflicting.
+- **Skip** if there is no login step, registry hostname, or deployment flow.
 
 ## Rust build in docker
 
 **Detects:** The docker build builds rust project without layer caching and/or without dependency caching
 
-**How to apply:**
-- Verify that the workflow uses cache-to and cache-from flags
-- Only on main branch use cache-to and cache from, on other branches you should use cache-from only
-- Use cache backend gha with mode max
-- Scope the cache according to the matrix strategy if applicable
-- In the dockerfile, use multistage pattern with rust dependency caching
-- In order to do dependency caching you should consider to use cargo chef
+### Pre-flight checklist (complete BEFORE writing any code)
+
+1. Read the existing Dockerfile. Note:
+   - Base image name, tag, and distro family (Alpine vs Debian/Ubuntu)
+   - Every `RUN` that installs system packages (`apk add`, `apt-get install`)
+   - The current `WORKDIR`
+   - Every `COPY --from=<stage>` in the runtime stage and its absolute paths
+   - Every `ARG` / `ENV` and which `RUN` steps reference them
+2. Check whether `Cargo.lock` exists in the repo root (run `ls Cargo.lock`).
+3. Identify the existing compile stage name (e.g. `compiler`, `builder`) — the new multi-stage pattern **replaces** it entirely. Do NOT add stages alongside the original.
+
+### Danger rules
+
+- **MUST** install system build dependencies BEFORE `cargo install cargo-chef`. On Alpine this means `apk add build-base` (and any other packages the original Dockerfile installs like `openssl-dev`) must come first. On Debian, `apt-get install build-essential` etc. must come first.
+- **MUST** set `WORKDIR /app` in the chef base stage. All subsequent stages inherit it.
+- **MUST** use `COPY . .` (not selective file copies) in the planner stage — cargo-chef needs the full workspace structure for workspaces with nested crates.
+- **MUST** place `ARG` and `ENV` declarations in the builder stage AFTER `cargo chef cook` and BEFORE `cargo build`. Placing them before cook invalidates the dependency cache on every build-arg change.
+- **MUST** update every `COPY --from=<stage>` in the runtime stage to use the new WORKDIR-relative path (e.g. `/app/target/release/...` instead of `/target/release/...`).
+- **MUST** keep the original `cargo build` command's flags and arguments (e.g. `-p <crate>`, `${EXTRA_ARGS}`) unchanged.
+- **MUST NOT** add cargo-chef stages alongside the original compile stage. The chef/planner/builder pattern **replaces** the original compile stage.
+- **MUST NOT** remove or move system package installation (`apk add` / `apt-get install`) that existed in the original Dockerfile — preserve them in the chef base stage.
+- **MUST NOT** add `cargo fetch` or other dependency utilities — cargo-chef handles this.
+
+### Template: Alpine-based
+
+Use when the existing Dockerfile uses an Alpine-based Rust image (e.g. `rust:*-alpine*`).
+
+```dockerfile
+FROM <ORIGINAL_RUST_IMAGE> AS chef
+# CRITICAL: system packages BEFORE cargo install
+RUN apk add -q --no-cache <ORIGINAL_PACKAGES e.g. build-base openssl-dev>
+RUN cargo install cargo-chef
+WORKDIR /app
+
+FROM chef AS planner
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
+
+FROM chef AS builder
+COPY --from=planner /app/recipe.json recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json
+COPY . .
+# ARGs go here — after cook, before build
+ARG ...
+ENV ...
+RUN <ORIGINAL_BUILD_COMMAND e.g. cargo build --release -p myapp>
+
+# Runtime stage — keep original base and structure
+FROM <ORIGINAL_RUNTIME_IMAGE e.g. alpine:3.22>
+...
+# CRITICAL: paths must include /app prefix
+COPY --from=builder /app/target/release/<binary> /bin/<binary>
+...
+```
+
+### Template: Debian-based
+
+Use when the existing Dockerfile uses a Debian-based Rust image (e.g. `rust:*-slim-bookworm`, `rust:*-bookworm`).
+
+```dockerfile
+FROM <ORIGINAL_RUST_IMAGE> AS chef
+# CRITICAL: system packages BEFORE cargo install
+RUN apt-get update && apt-get install -y --no-install-recommends <ORIGINAL_PACKAGES> && \
+    rm -rf /var/lib/apt/lists/*
+RUN cargo install cargo-chef
+WORKDIR /app
+
+FROM chef AS planner
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
+
+FROM chef AS builder
+COPY --from=planner /app/recipe.json recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json
+COPY . .
+# ARGs go here — after cook, before build
+ARG ...
+ENV ...
+RUN <ORIGINAL_BUILD_COMMAND>
+
+# Runtime stage
+FROM <ORIGINAL_RUNTIME_IMAGE>
+...
+COPY --from=builder /app/target/release/<binary> /bin/<binary>
+...
+```
+
+### Post-change verification checklist
+
+After writing the new Dockerfile, verify each item:
+
+1. Every `COPY --from=<stage> <path>` uses the correct absolute path including the WORKDIR prefix (`/app/...`).
+2. No `RUN` step references a tool that hasn't been installed yet in the current stage (e.g. `cargo install cargo-chef` without prior `apk add build-base`).
+3. Every `ARG` is declared in the stage that uses it (ARGs don't cross `FROM` boundaries).
+4. The original `cargo build` flags, `-p` package selectors, and `${EXTRA_ARGS}` are preserved.
+5. The runtime stage's `COPY --from=` references the correct stage name (e.g. `builder`, not the old `compiler`).
+6. The runtime stage base image matches the distro family of the build stages (e.g. if build uses Alpine, runtime uses Alpine).
+
+### Workflow YAML: GitHub Actions caching
+
+Add GHA cache flags to the `docker/build-push-action` step. Use `cache-to` only on the main/default branch to avoid cache pollution from feature branches.
+
+```yaml
+- uses: docker/build-push-action@v6
+  with:
+    ...
+    cache-from: type=gha,scope=<PREFIX>-${{matrix.<PARAM_1>}}-${{matrix.<PARAM_2>}}...
+    cache-to: ${{ github.ref == 'refs/heads/main' && 'type=gha,mode=max,scope=<PREFIX>-${{matrix.<PARAM_1>}}-${{matrix.<PARAM_2>}}...' || '' }}
+    ...
+```
+
+Scope the cache key to include all matrix parameters that affect the build output (platform, edition, etc.).
