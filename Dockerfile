@@ -1,16 +1,24 @@
 # Compile
-FROM    rust:1.89-alpine3.22 AS compiler
-
+FROM    rust:1.89-alpine3.22 AS chef
 RUN     apk add -q --no-cache build-base openssl-dev
+RUN     cargo install cargo-chef
+WORKDIR /app
 
-WORKDIR /
+FROM    chef AS planner
+COPY    ./Cargo.toml ./Cargo.lock ./
+COPY    ./crates ./crates
+RUN     cargo chef prepare --recipe-path recipe.json
 
+FROM    chef AS compiler
 ARG     COMMIT_SHA
 ARG     COMMIT_DATE
 ARG     GIT_TAG
 ARG     EXTRA_ARGS
 ENV     VERGEN_GIT_SHA=${COMMIT_SHA} VERGEN_GIT_COMMIT_TIMESTAMP=${COMMIT_DATE} VERGEN_GIT_DESCRIBE=${GIT_TAG}
 ENV     RUSTFLAGS="-C target-feature=-crt-static"
+
+COPY    --from=planner /app/recipe.json recipe.json
+RUN     cargo chef cook --release --recipe-path recipe.json
 
 COPY    . .
 RUN     set -eux; \
