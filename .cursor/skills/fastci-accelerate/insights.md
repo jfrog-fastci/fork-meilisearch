@@ -108,9 +108,40 @@ Each insight lists what it detects and the safety rules for applying it.
 **Detects:** The docker build builds rust project without layer caching and/or without dependency caching
 
 **How to apply:**
-- Verify that the workflow uses cache-to and cache-from flags
-- Only on main branch use cache-to and cache from, on other branches you should use cache-from only
-- Use cache backend gha with mode max
-- Scope the cache according to the matrix strategy if applicable
-- In the dockerfile, use multistage pattern with rust dependency caching
-- In order to do dependency caching you should consider to use cargo chef
+- Install cargo-chef in the Dockerfile's base image 
+  - **DONT** add cargo fetch or other utilities
+  - **DONT** remove apk add or apt-get install that are in the dockerfile
+  ```dockerfile
+  RUN cargo install cargo-chef
+  ```
+- Create a recipe file in a separate stage:
+  ```dockerfile
+  FROM rust:1.89-alpine3.22 AS chef
+  RUN cargo install cargo-chef
+  WORKDIR /app
+
+  FROM chef AS planner
+  COPY ./Cargo.toml ./Cargo.lock ./
+  # Generate a recipe file for dependencies
+  RUN cargo chef prepare --recipe-path recipe.json
+
+  FROM chef AS builder
+  COPY --from=planner /app/recipe.json recipe.json
+  # Build dependencies only (this layer will be cached)
+  RUN cargo chef cook --release --recipe-path recipe.json
+  # Now copy source code
+  COPY . .
+  # Build the application
+  RUN cargo build --release
+  ```
+- In the workflow yaml, add GitHub Actions caching:
+  **EXPLICTLY** use cache-to only when github.ref == 'refs/heads/main' in order to avoid
+    cache write on feature branches
+  ```yaml
+  - uses: docker/build-push-action@v6
+    with:
+      ...
+      cache-to: ${{ github.ref == 'refs/heads/main' && 'type=gha,mode=max,scope=<PREFIX>-${{matrix.<PARAMETER_1>}}-${{matrix.<PARAMETER_2>}}...' || '' }}
+      cache-from: type=gha,scope=<PREFIX>-${{matrix.<PARAMETER_1>}}-${{matrix.<PARAMETER_2>}}...
+      ...
+  ```
