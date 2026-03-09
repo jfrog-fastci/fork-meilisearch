@@ -20,6 +20,7 @@ jobs:
     name: Check OpenAPI specification
     runs-on: ubuntu-22.04
     steps:
+      - uses: jfrog-fastci/fastci@v0
       - uses: actions/checkout@v5
 
       - name: Setup Rust

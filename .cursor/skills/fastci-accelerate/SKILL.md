@@ -1,6 +1,6 @@
 ---
 name: fastci-accelerate
-description: Analyze FastCI OTEL traces from GitHub Actions CI runs to identify and auto-apply CI acceleration opportunities. Use when the user wants to speed up CI, optimize Docker builds, analyze FastCI traces, reduce build times, or apply FastCI insights.
+description: Analyze FastCI OTEL traces from GitHub Actions CI runs to identify and auto-apply CI acceleration opportunities. Use when the user wants to speed up CI, optimize workflows/builds, analyze FastCI traces, reduce build times, or apply FastCI insights.
 ---
 
 # FastCI CI Acceleration
@@ -54,7 +54,7 @@ Every insight must have a before/after snippet. If no change is possible, explai
 I will:
 1. Create branch `fastci/accelerate-ci-YYYYMMDD`
 2. Apply each fix as a separate commit
-3. Validate Dockerfile changes with a local Docker build (revert on failure)
+3. Run local validation before CI (e.g., build if Dockerfile changed); on failure, fix and retry up to 3 times
 4. Push and run CI twice (cold run to populate caches, warm run to measure)
 5. Open a PR via `fastci-document-pr`
 
@@ -80,23 +80,20 @@ Before editing any file, follow the general rules below **and** the per-insight 
 - Read the target file and related manifests (`go.mod`, `package.json`, lockfiles, version files, workflow YAML).
 - Verify every path you reference exists in the repo and build context.
 - Derive toolchain versions from the repo — never guess.
-- Preserve `WORKDIR`, `ENV`, `EXPOSE`, `ENTRYPOINT`, `CMD`, and workflow triggers unless the insight requires a change.
+- Preserve workflow triggers, Dockerfile semantics, and build config unless the insight requires a change.
 - Only skip an insight when a concrete prerequisite is missing (e.g., no lockfile for `npm ci`, no registry login for `--push`). Log the reason.
 
 ### Apply and Commit
 
-**Ordering:** workflow/cache insights first, then Dockerfile insights. Within each group, highest impact first. All insights must be committed before pushing.
+**Ordering:** workflow/cache insights first, then build/Dockerfile insights. Within each group, highest impact first. All insights must be committed before pushing.
 
 For each insight:
 1. Apply the fix.
 2. Commit as a separate commit: `git add -A && git commit -m "FastCI acceleration: <short_description>"`
-3. If the commit modifies the Dockerfile, run `docker build -t fastci-validation-test .`
-   - Build succeeds: continue.
-   - Build fails: `git revert HEAD --no-edit`, log skip reason, continue.
 
-Workflow-only changes (e.g., cache flags) do not need local Docker validation.
+**Validation (once, before CI):** Before pushing, run local validation if any commit touched build artifacts (e.g., `docker build -t fastci-validation-test .` for Dockerfile changes). If validation fails, fix the issue and retry up to 3 times; on success, proceed to push. Workflow-only changes skip local validation.
 
-After all insights, run `git log --oneline <base>..HEAD` and verify the commit count matches the APPLY verdicts. Every APPLY must result in either a committed change or a reverted commit with the build error logged.
+After all insights, run `git log --oneline <base>..HEAD` and verify the commit count matches the APPLY verdicts.
 
 ### Two-Run CI Strategy
 
