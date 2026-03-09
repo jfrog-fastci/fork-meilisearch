@@ -67,9 +67,9 @@ jobs:
           platforms: linux/${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ matrix.registry }}
-          outputs: type=image,name-canonical=true
+          push: true
           cache-from: type=gha,scope=meilisearch-${{ matrix.platform }}-${{ matrix.edition }}
-          cache-to: ${{ github.ref == 'refs/heads/main' && format('type=gha,mode=max,scope=meilisearch-{0}-{1}', matrix.platform, matrix.edition) || '' }}
+          cache-to: type=gha,mode=max,scope=meilisearch-${{ matrix.platform }}-${{ matrix.edition }}
           build-args: |
             COMMIT_SHA=${{ github.sha }}
             COMMIT_DATE=${{ steps.build-metadata.outputs.date }}
