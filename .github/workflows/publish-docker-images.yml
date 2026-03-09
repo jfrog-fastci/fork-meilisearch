@@ -73,6 +73,8 @@ jobs:
             COMMIT_DATE=${{ steps.build-metadata.outputs.date }}
             GIT_TAG=${{ github.ref_name }}
             EXTRA_ARGS=${{ matrix.feature-flag }}
+          cache-from: type=gha,scope=meilisearch-${{ matrix.platform }}-${{ matrix.edition }}
+          cache-to: ${{ github.ref == 'refs/heads/main' && format('type=gha,mode=max,scope=meilisearch-{0}-{1}', matrix.platform, matrix.edition) || '' }}
 
       - name: Export digest
         run: |
