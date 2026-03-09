@@ -2,8 +2,14 @@
 FROM    rust:1.89-alpine3.22 AS compiler
 
 RUN     apk add -q --no-cache build-base openssl-dev
-
+RUN     cargo install cargo-chef
 WORKDIR /
+
+FROM    compiler AS planner
+COPY    ./Cargo.toml ./Cargo.lock ./
+RUN     cargo chef prepare --recipe-path recipe.json
+
+FROM    compiler AS builder
 
 ARG     COMMIT_SHA
 ARG     COMMIT_DATE
@@ -12,6 +18,8 @@ ARG     EXTRA_ARGS
 ENV     VERGEN_GIT_SHA=${COMMIT_SHA} VERGEN_GIT_COMMIT_TIMESTAMP=${COMMIT_DATE} VERGEN_GIT_DESCRIBE=${GIT_TAG}
 ENV     RUSTFLAGS="-C target-feature=-crt-static"
 
+COPY    --from=planner /app/recipe.json recipe.json
+RUN     cargo chef cook --release --recipe-path recipe.json
 COPY    . .
 RUN     set -eux; \
         apkArch="$(apk --print-arch)"; \
