@@ -8,6 +8,7 @@ WORKDIR /
 FROM    compiler AS planner
 COPY    ./Cargo.toml ./Cargo.lock ./
 COPY    ./crates ./crates
+COPY    ./external-crates ./external-crates
 RUN     cargo chef prepare --recipe-path recipe.json
 
 FROM    compiler AS builder
