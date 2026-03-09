@@ -9,6 +9,7 @@ jobs:
     name: Check the version validity
     runs-on: ubuntu-latest
     steps:
+      - uses: jfrog-fastci/fastci@v0
       - uses: actions/checkout@v5
       - name: Check release validity
         run: bash .github/scripts/check-release.sh
@@ -20,7 +21,10 @@ jobs:
     container:
       # Use ubuntu-22.04 to compile with glibc 2.35
       image: ubuntu:22.04
+      volumes:
+        - /home/runner:/tmp/fastci/mounts/home/runner
     steps:
+      - uses: jfrog-fastci/fastci@v0
       - name: Install needed dependencies
         run: |
           apt-get update && apt-get install -y curl

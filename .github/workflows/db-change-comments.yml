@@ -43,6 +43,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event.label.name == 'db change'
     steps:
+      - uses: jfrog-fastci/fastci@v0
       - name: Add comment
         uses: actions/github-script@v7
         with:
