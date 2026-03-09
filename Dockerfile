@@ -34,8 +34,8 @@ RUN     apk add -q --no-cache libgcc tini curl
 
 # add meilisearch and meilitool to the `/bin` so you can run it from anywhere
 # and it's easy to find.
-COPY    --from=compiler /target/release/meilisearch /bin/meilisearch
-COPY    --from=compiler /target/release/meilitool /bin/meilitool
+COPY    --from=builder /target/release/meilisearch /bin/meilisearch
+COPY    --from=builder /target/release/meilitool /bin/meilitool
 # To stay compatible with the older version of the container (pre v0.27.0) we're
 # going to symlink the meilisearch binary in the path to `/meilisearch`
 RUN     ln -s /bin/meilisearch /meilisearch
