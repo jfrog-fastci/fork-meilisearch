@@ -1,4 +1,19 @@
-# Compile
+# Chef stage for cargo-chef
+FROM rust:1.89-alpine3.22 AS chef
+RUN cargo install cargo-chef
+WORKDIR /app
+
+# Planner stage to generate recipe
+FROM chef AS planner
+COPY ./Cargo.toml ./Cargo.lock ./
+RUN cargo chef prepare --recipe-path recipe.json
+
+# Builder stage to compile dependencies
+FROM chef AS builder
+COPY --from=planner /app/recipe.json recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json
+
+# Compile stage
 FROM    rust:1.89-alpine3.22 AS compiler
 
 RUN     apk add -q --no-cache build-base openssl-dev
@@ -12,6 +27,11 @@ ARG     EXTRA_ARGS
 ENV     VERGEN_GIT_SHA=${COMMIT_SHA} VERGEN_GIT_COMMIT_TIMESTAMP=${COMMIT_DATE} VERGEN_GIT_DESCRIBE=${GIT_TAG}
 ENV     RUSTFLAGS="-C target-feature=-crt-static"
 
+# Copy pre-compiled dependencies from builder stage
+COPY --from=builder /app/target target
+COPY --from=builder /usr/local/cargo /usr/local/cargo
+
+# Copy source and build
 COPY    . .
 RUN     set -eux; \
         apkArch="$(apk --print-arch)"; \
