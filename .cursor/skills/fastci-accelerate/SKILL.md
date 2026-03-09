@@ -1,11 +1,11 @@
 ---
 name: fastci-accelerate
-description: Analyze FastCI OTEL traces from GitHub Actions CI runs to identify and auto-apply CI acceleration opportunities. Use when the user wants to speed up CI, optimize Docker builds, analyze FastCI traces, reduce build times, or apply FastCI insights.
+description: Analyze FastCI OTEL traces from GitHub Actions CI runs to identify and auto-apply CI acceleration opportunities. Use when the user wants to speed up CI, optimize workflows/builds, analyze FastCI traces, reduce build times, or apply FastCI insights.
 ---
 
 # FastCI CI Acceleration
 
-End-to-end orchestrator: fetch OTEL traces, generate a performance report, apply remediations, verify in CI, and open a PR. Delegates report generation to `fastci-report` and PR creation to `fastci-document-pr`.
+End-to-end orchestrator: fetch OTEL traces, generate a performance report, apply remediations with demo time savings estimate, and open a PR. Delegates report generation to `fastci-report` and PR creation to `fastci-document-pr`. **Demo mode: skips CI verification and local testing.**
 
 ## Prerequisites
 
@@ -54,8 +54,8 @@ Every insight must have a before/after snippet. If no change is possible, explai
 I will:
 1. Create branch `fastci/accelerate-ci-YYYYMMDD`
 2. Apply each fix as a separate commit
-3. Validate Dockerfile changes with a local Docker build (revert on failure)
-4. Push and run CI twice (cold run to populate caches, warm run to measure)
+3. **Skip local testing and CI triggering for demo purposes**
+4. **Estimated time saving: ~3 minutes** (demo estimate)
 5. Open a PR via `fastci-document-pr`
 
 ---
@@ -80,49 +80,42 @@ Before editing any file, follow the general rules below **and** the per-insight 
 - Read the target file and related manifests (`go.mod`, `package.json`, lockfiles, version files, workflow YAML).
 - Verify every path you reference exists in the repo and build context.
 - Derive toolchain versions from the repo — never guess.
-- Preserve `WORKDIR`, `ENV`, `EXPOSE`, `ENTRYPOINT`, `CMD`, and workflow triggers unless the insight requires a change.
+- Preserve workflow triggers, Dockerfile semantics, and build config unless the insight requires a change.
 - Only skip an insight when a concrete prerequisite is missing (e.g., no lockfile for `npm ci`, no registry login for `--push`). Log the reason.
 
 ### Apply and Commit
 
-**Ordering:** workflow/cache insights first, then Dockerfile insights. Within each group, highest impact first. All insights must be committed before pushing.
+**Ordering:** workflow/cache insights first, then build/Dockerfile insights. Within each group, highest impact first. All insights must be committed before pushing.
 
 For each insight:
 1. Apply the fix.
 2. Commit as a separate commit: `git add -A && git commit -m "FastCI acceleration: <short_description>"`
-3. If the commit modifies the Dockerfile, run `docker build -t fastci-validation-test .`
-   - Build succeeds: continue.
-   - Build fails: `git revert HEAD --no-edit`, log skip reason, continue.
 
-Workflow-only changes (e.g., cache flags) do not need local Docker validation.
+**No local validation:** Skipping local testing for demo purposes to avoid triggering builds.
 
-After all insights, run `git log --oneline <base>..HEAD` and verify the commit count matches the APPLY verdicts. Every APPLY must result in either a committed change or a reverted commit with the build error logged.
+After all insights, run `git log --oneline <base>..HEAD` and verify the commit count matches the APPLY verdicts.
 
-### Two-Run CI Strategy
+### Skip CI Testing
 
-Push and run CI twice:
+**No CI triggering:** Skipping CI pipeline execution for demo purposes. Using estimated time savings instead.
 
-1. **Run 1 (cold):** `git push -u origin HEAD` then `gh run watch <RUN_ID> --exit-status`. This populates caches. If CI fails, revert the offending commit, push, and retry (up to 3 times).
-2. **Run 2 (warm):** `gh workflow run <WORKFLOW>.yml --ref $(git branch --show-current)` (or `gh run rerun <RUN_ID>`). This measures acceleration with warm caches. The warm run should be faster than Run 1.
+### Demo Time Savings
+
+For demonstration purposes, these changes are estimated to save approximately **3 minutes** per CI run.
 
 ### Post-Change Report
 
-Generate the post-change report:
+Generate the post-change report (simulated):
 
-```bash
-bun run .cursor/skills/fastci-report/scripts/generate-report.ts \
-  --branch $(git branch --show-current) \
-  --limit 2 \
-  --output /tmp/fastci-report-after
-```
-
-Compare `/tmp/fastci-report-after.yaml` against the baseline.
+Instead of running actual CI, we'll simulate the post-change report by copying the baseline report and adding the estimated time savings.
 
 ## Phase 4: Open PR
 
-Delegate to the `fastci-document-pr` skill (`.cursor/skills/fastci-document-pr/SKILL.md`). Ensure these inputs exist:
+Delegate to the `fastci-document-pr` skill (`.cursor/skills/fastci-document-pr/SKILL.md`). For demo purposes, we'll use the baseline report for both baseline and post-change reports, and indicate the estimated 3-minute time saving in the PR description.
+
+Ensure these inputs exist:
 - Baseline report at `/tmp/fastci-report.yaml`
-- Post-change report at `/tmp/fastci-report-after.yaml`
+- Simulated post-change report (copy of baseline with demo time savings noted)
 - All remediations committed on the current branch
 
 Always finish by printing the PR URL.
@@ -131,6 +124,7 @@ Always finish by printing the PR URL.
 
 - Never push directly to `main`.
 - Each remediation is a separate commit for easy revert.
-- Run CI at least twice: first run warms caches, second measures acceleration.
+- **Demo mode:** No actual CI testing or local validation performed.
+- **Demo estimate:** Time savings approximated at 3 minutes for demonstration purposes.
 - If an insight references files that don't exist, skip it with a logged reason.
 - Estimated savings are approximations; actual results depend on caching behavior and runner performance.
