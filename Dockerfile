@@ -1,38 +1,42 @@
 # Compile
-FROM    rust:1.89-alpine3.22 AS compiler
+FROM lukemathwalker/cargo-chef:latest-rust-alpine3.23 AS chef
+RUN apk add -q --no-cache build-base openssl-dev
+WORKDIR /app
 
-RUN     apk add -q --no-cache build-base openssl-dev
+FROM chef AS planner
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
 
-WORKDIR /
-
-ARG     COMMIT_SHA
-ARG     COMMIT_DATE
-ARG     GIT_TAG
-ARG     EXTRA_ARGS
-ENV     VERGEN_GIT_SHA=${COMMIT_SHA} VERGEN_GIT_COMMIT_TIMESTAMP=${COMMIT_DATE} VERGEN_GIT_DESCRIBE=${GIT_TAG}
-ENV     RUSTFLAGS="-C target-feature=-crt-static"
-
-COPY    . .
-RUN     set -eux; \
-        apkArch="$(apk --print-arch)"; \
-        cargo build --release -p meilisearch -p meilitool ${EXTRA_ARGS}
+FROM chef AS builder
+COPY --from=planner /app/recipe.json recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json
+COPY . .
+ARG COMMIT_SHA
+ARG COMMIT_DATE
+ARG GIT_TAG
+ARG EXTRA_ARGS
+ENV VERGEN_GIT_SHA=${COMMIT_SHA} VERGEN_GIT_COMMIT_TIMESTAMP=${COMMIT_DATE} VERGEN_GIT_DESCRIBE=${GIT_TAG}
+ENV RUSTFLAGS="-C target-feature=-crt-static"
+RUN set -eux; \
+    apkArch="$(apk --print-arch)"; \
+    cargo build --release -p meilisearch -p meilitool ${EXTRA_ARGS}
 
 # Run
-FROM    alpine:3.22
-LABEL   org.opencontainers.image.source="https://github.com/meilisearch/meilisearch"
+FROM alpine:3.22
+LABEL org.opencontainers.image.source="https://github.com/meilisearch/meilisearch"
 
-ENV     MEILI_HTTP_ADDR 0.0.0.0:7700
-ENV     MEILI_SERVER_PROVIDER docker
+ENV MEILI_HTTP_ADDR 0.0.0.0:7700
+ENV MEILI_SERVER_PROVIDER docker
 
-RUN     apk add -q --no-cache libgcc tini curl
+RUN apk add -q --no-cache libgcc tini curl
 
 # add meilisearch and meilitool to the `/bin` so you can run it from anywhere
 # and it's easy to find.
-COPY    --from=compiler /target/release/meilisearch /bin/meilisearch
-COPY    --from=compiler /target/release/meilitool /bin/meilitool
+COPY --from=builder /app/target/release/meilisearch /bin/meilisearch
+COPY --from=builder /app/target/release/meilitool /bin/meilitool
 # To stay compatible with the older version of the container (pre v0.27.0) we're
 # going to symlink the meilisearch binary in the path to `/meilisearch`
-RUN     ln -s /bin/meilisearch /meilisearch
+RUN ln -s /bin/meilisearch /meilisearch
 
 # This directory should hold all the data related to meilisearch so we're going
 # to move our PWD in there.
@@ -40,7 +44,7 @@ RUN     ln -s /bin/meilisearch /meilisearch
 WORKDIR /meili_data
 
 
-EXPOSE  7700/tcp
+EXPOSE 7700/tcp
 
 ENTRYPOINT ["tini", "--"]
-CMD     /bin/meilisearch
+CMD /bin/meilisearch
